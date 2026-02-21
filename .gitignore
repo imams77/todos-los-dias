@@ -1,0 +1,15 @@
+# Python cache and bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Ignore any content created in the data folder (keep the directory if present)
+data/*
+!data/.gitkeep
+
+# Ignore redundant commands data dir if created
+commands/data/
+
+# Editor and system files (optional common ignores)
+.DS_Store
+Thumbs.db
