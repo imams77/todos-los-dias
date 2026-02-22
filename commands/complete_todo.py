@@ -26,13 +26,12 @@ def complete_todo(code):
     # determine duration to record
     current_status = ws.cell_value(row_to_update, 2) if ws.ncols > 2 else ''
 
-    # existing duration
-    existing_duration = 0.0
-    if ws.ncols > 6:
-        try:
-            existing_duration = float(ws.cell_value(row_to_update, 6) or 0.0)
-        except Exception:
-            existing_duration = 0.0
+    # existing duration (supports previous numeric seconds or HH:MM:SS)
+    try:
+        from .core.todo_ops import safe_float, format_seconds_as_hms
+    except Exception:
+        from commands.core.todo_ops import safe_float, format_seconds_as_hms
+    existing_duration = safe_float(ws.cell_value(row_to_update, 6) if ws.ncols > 6 else 0.0)
 
     added_seconds = 0.0
     # if in progress or paused, compute additional time
@@ -72,7 +71,8 @@ def complete_todo(code):
             elif row == row_to_update and col == 5:
                 val = today.strftime('%d/%m/%Y %H:%M:%S')
             elif row == row_to_update and col == 6:
-                val = total_duration
+                # store as HH:MM:SS
+                val = format_seconds_as_hms(total_duration)
             ws_write.write(row, col, val)
 
         if row == row_to_update and ws.ncols < 9:
@@ -80,7 +80,7 @@ def complete_todo(code):
                 if col == 5:
                     ws_write.write(row, col, today.strftime('%d/%m/%Y %H:%M:%S'))
                 elif col == 6:
-                    ws_write.write(row, col, total_duration)
+                    ws_write.write(row, col, format_seconds_as_hms(total_duration))
 
     wb_projects = xlrd.open_workbook(filename)
     ws_projects = wb_projects.sheet_by_name('Project List')

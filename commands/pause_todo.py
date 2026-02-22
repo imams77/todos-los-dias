@@ -45,14 +45,13 @@ def pause_todo(code):
             except Exception:
                 added_seconds = 0.0
 
-    # read existing duration
-    existing_duration = 0.0
-    if ws.ncols > 6:
-        val = ws.cell_value(row_to_update, 6)
-        try:
-            existing_duration = float(val) if val not in (None, '') else 0.0
-        except Exception:
-            existing_duration = 0.0
+    # read existing duration (supports old numeric seconds or HH:MM:SS strings)
+    try:
+        from .core.todo_ops import safe_float
+    except Exception:
+        # fallback for direct execution/imports
+        from commands.core.todo_ops import safe_float
+    existing_duration = safe_float(ws.cell_value(row_to_update, 6) if ws.ncols > 6 else 0.0)
 
     total_duration = existing_duration + added_seconds
 
@@ -71,7 +70,9 @@ def pause_todo(code):
             if row == row_to_update and col == 2:
                 val = 'PAUSED'
             elif row == row_to_update and col == 6:
-                val = total_duration
+                # write duration as HH:MM:SS
+                from .core.todo_ops import format_seconds_as_hms
+                val = format_seconds_as_hms(total_duration)
             elif row == row_to_update and col == 7:
                 val = today.strftime('%d/%m/%Y %H:%M:%S')
             ws_write.write(row, col, val)
@@ -79,7 +80,8 @@ def pause_todo(code):
         if row == row_to_update and ws.ncols < 9:
             for col in range(ws.ncols, 9):
                 if col == 6:
-                    ws_write.write(row, col, total_duration)
+                    from .core.todo_ops import format_seconds_as_hms
+                    ws_write.write(row, col, format_seconds_as_hms(total_duration))
                 elif col == 7:
                     ws_write.write(row, col, today.strftime('%d/%m/%Y %H:%M:%S'))
 

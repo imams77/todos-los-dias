@@ -40,6 +40,25 @@ def show_todo(code):
     for name, col in mapping:
         val = v(col)
         if val not in (None, ''):
+            # Format duration value as HH:MM:SS if possible
+            if name == 'duration':
+                try:
+                    try:
+                        from .core.todo_ops import safe_float, format_seconds_as_hms
+                    except Exception:
+                        from commands.core.todo_ops import safe_float, format_seconds_as_hms
+
+                    if isinstance(val, (int, float)):
+                        out.append(f"{name}: {format_seconds_as_hms(float(val))}")
+                    elif isinstance(val, str) and ':' in val:
+                        out.append(f"{name}: {val}")
+                    else:
+                        secs = safe_float(val)
+                        out.append(f"{name}: {format_seconds_as_hms(secs)}")
+                    continue
+                except Exception:
+                    # fall back to raw value on any error
+                    pass
             out.append(f"{name}: {val}")
 
     return "\n".join(out)

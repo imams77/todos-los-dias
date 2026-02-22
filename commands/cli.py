@@ -9,7 +9,17 @@ import argparse
 import sys
 from pathlib import Path
 
-from . import init_cmd, add_cmd, start_cmd, show_cmd, list_cmd, delete_cmd, complete_cmd, pause_cmd
+from . import (
+    init_cmd,
+    add_cmd,
+    start_cmd,
+    continue_cmd,
+    show_cmd,
+    list_cmd,
+    delete_cmd,
+    complete_cmd,
+    pause_cmd,
+)
 
 
 def get_data_dir() -> Path:
@@ -98,6 +108,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument('target', help='todo code or "all"')
 
+    p = sub.add_parser(
+        'continue',
+        help='continue a paused todo',
+        description='Continue a paused todo and accumulate duration.\n\nExample:\n  todo continue ABC-001',
+    )
+    p.add_argument('code', help='todo code (eg. ABC-001)')
+
     return parser
 
 
@@ -122,6 +139,9 @@ def main(argv=None) -> int:
 
         if args.command == 'start':
             return start_cmd.run(data_dir, [args.code.upper()])
+
+        if args.command == 'continue':
+            return continue_cmd.run(data_dir, [args.code.upper()])
 
         if args.command == 'show':
             return show_cmd.run(data_dir, [args.code.upper()])

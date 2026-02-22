@@ -34,7 +34,25 @@ def list_todos(code=None, status=None):
         created = ws.cell_value(row, 3) if ws.ncols > 3 else ''
         started = ws.cell_value(row, 4) if ws.ncols > 4 else ''
         ended = ws.cell_value(row, 5) if ws.ncols > 5 else ''
-        duration = ws.cell_value(row, 6) if ws.ncols > 6 else ''
+        # display duration in HH:MM:SS if possible
+        try:
+            from .core.todo_ops import safe_float, format_seconds_as_hms
+        except Exception:
+            from commands.core.todo_ops import safe_float, format_seconds_as_hms
+        raw_duration = ws.cell_value(row, 6) if ws.ncols > 6 else ''
+        if raw_duration in (None, ''):
+            duration = ''
+        else:
+            # try to parse; if it was already HH:MM:SS, keep as-is
+            try:
+                # if string with colon, keep original formatting
+                if isinstance(raw_duration, str) and ':' in raw_duration:
+                    duration = raw_duration
+                else:
+                    secs = safe_float(raw_duration)
+                    duration = format_seconds_as_hms(secs)
+            except Exception:
+                duration = str(raw_duration)
 
         print(f"{row_code}, {title}, {st}, {created}, {started}, {ended}, {duration}")
 
