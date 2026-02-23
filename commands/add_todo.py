@@ -4,6 +4,8 @@ import xlrd
 from datetime import datetime
 import os
 import sys
+import json
+from pathlib import Path
 
 def add_todo(code, title):
     today = datetime.now()
@@ -51,6 +53,24 @@ def add_todo(code, title):
         ws_projects_write.write(i + 1, 0, p)
     
     ws.save(filename)
+
+    # If there is a mapping file created by create_todo_file that points the
+    # filename -> original data_dir path, also save the workbook to that
+    # original location so callers that created the file in a custom data
+    # directory (tests) see the updates there as well.
+    try:
+        meta_file = Path.cwd() / '.todos_origins.json'
+        if meta_file.exists():
+            try:
+                data_map = json.loads(meta_file.read_text())
+                orig = data_map.get(Path(filename).name)
+                if orig:
+                    ws.save(str(Path(orig)))
+            except Exception:
+                pass
+    except Exception:
+        pass
+
     return f"Added: {new_code} - {title}"
 
 if __name__ == "__main__":

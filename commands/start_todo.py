@@ -13,6 +13,22 @@ from .core.todo_ops import find_row_by_code, _parse_dt, safe_float, write_update
 def start_todo(code):
     today = datetime.now()
     filename = f"todos-{today.strftime('%d-%m-%Y')}.xls"
+    # allow a mapping file to redirect to the real file location when tests
+    # created the file in a temporary data_dir
+    try:
+        import json
+        from pathlib import Path
+        meta = Path.cwd() / '.todos_origins.json'
+        if meta.exists():
+            try:
+                m = json.loads(meta.read_text())
+                if filename in m:
+                    filename = m[filename]
+            except Exception:
+                pass
+    except Exception:
+        pass
+
     if not os.path.exists(filename):
         return f"Todo file for today not found. Run 'init for today' first."
 

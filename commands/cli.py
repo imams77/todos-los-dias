@@ -19,6 +19,7 @@ from . import (
     delete_cmd,
     complete_cmd,
     pause_cmd,
+    summary_cmd,
 )
 
 
@@ -56,6 +57,13 @@ def build_parser() -> argparse.ArgumentParser:
         help='create today todo file',
         description='Create today todo file.\n\nExample:\n  todo init',
     )
+
+    p = sub.add_parser(
+        'summary',
+        help='show summary of todos',
+        description='Show summary of todos.\n\nExamples:\n  todo summary\n  todo summary yesterday',
+    )
+    p.add_argument('which', nargs='*', help='optional: yesterday')
 
     p = sub.add_parser(
         'add',
@@ -166,6 +174,11 @@ def main(argv=None) -> int:
             if target == 'all':
                 return pause_cmd.run(data_dir, ['all'])
             return pause_cmd.run(data_dir, [args.target.upper()])
+
+        if args.command == 'summary':
+            if hasattr(args, 'which') and args.which:
+                return summary_cmd.run(data_dir, [args.which[0]])
+            return summary_cmd.run(data_dir, [])
 
         parser.print_help()
         return 1
