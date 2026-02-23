@@ -1,14 +1,19 @@
 from pathlib import Path
+from rich.console import Console
+from rich.live import Live
+from rich.spinner import Spinner
+
+
+console = Console()
 
 
 def run(data_dir: Path, args):
     import os
     if len(args) < 1:
-        print("Usage: todo pause <CODE>|all")
+        console.print("[bold red]Usage:[/bold red] todo pause <CODE>|all")
         return 1
     target = args[0].lower()
 
-    # try package-local implementations first, fall back to top-level module
     try:
         from . import pause_todo as _pause
     except Exception:
@@ -30,15 +35,21 @@ def run(data_dir: Path, args):
         os.chdir(str(data_dir))
         if target == 'all':
             if _pause_all is None:
-                print('pause all command not available')
+                console.print("[bold red]pause all command not available[/bold red]")
                 return 1
-            res = _pause_all.pause_all_todos()
+            with Live(Spinner("dots", text="Pausing all todos..."), console=console, transient=True) as live:
+                res = _pause_all.pause_all_todos()
+            console.print(f"[bold yellow]⏸ {res}[/bold yellow]")
         else:
             if _pause is None:
-                print('pause command not available')
+                console.print("[bold red]pause command not available[/bold red]")
                 return 1
-            res = _pause.pause_todo(args[0].upper())
-        print(res)
+            with Live(Spinner("dots", text="Pausing todo..."), console=console, transient=True) as live:
+                res = _pause.pause_todo(args[0].upper())
+            if "not found" in res.lower():
+                console.print(f"[bold red]✗ {res}[/bold red]")
+            else:
+                console.print(f"[bold yellow]⏸ {res}[/bold yellow]")
         return 0
     finally:
         os.chdir(cwd)

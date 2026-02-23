@@ -4,6 +4,13 @@ import xlrd
 import os
 from datetime import datetime, timedelta
 from .core.todo_ops import safe_float, format_seconds_as_hms
+from rich.console import Console
+from rich.table import Table
+from rich.panel import Panel
+from rich.text import Text
+
+
+console = Console()
 
 
 def get_filename(date=None):
@@ -103,30 +110,34 @@ def print_summary(date=None):
     
     if summary is None:
         if date.date() == datetime.now().date():
-            print("No todo file for today found. Run 'init for today' first.")
+            console.print("[bold red]No todo file for today found. Run 'init for today' first.[/bold red]")
         else:
-            print(f"No todo file for {date.strftime('%d/%m/%Y')} found.")
+            console.print(f"[bold red]No todo file for {date.strftime('%d/%m/%Y')} found.[/bold red]")
         return
     
-    print(f"date: {summary['date']}")
-    print(f"total added: {summary['total']}")
-    print(f"  draft (not started): {summary['draft']}")
-    print(f"  started: {summary['started']}")
-    print(f"    in progress: {summary['in_progress']}")
-    print(f"  completed: {summary['completed']}")
-    print(f"")
-    print(f"percent done (completed / started): {summary['percent']:.1f}%")
+    # Build table for main stats
+    table = Table(box=None, show_header=False)
+    table.add_column("Label", style="cyan")
+    table.add_column("Value", style="white", justify="right")
+    
+    table.add_row("Date", f"[bold]{summary['date']}[/bold]")
+    table.add_row("Total Added", str(summary['total']))
+    table.add_row("Draft (not started)", str(summary['draft']))
+    table.add_row("Started", str(summary['started']))
+    table.add_row("  In Progress", str(summary['in_progress']))
+    table.add_row("  Completed", str(summary['completed']))
+    table.add_row("Percent Done", f"{summary['percent']:.1f}%")
     
     if summary['total_duration']:
-        print(f"total time: {summary['total_duration']}")
-    
+        table.add_row("Total Time", summary['total_duration'])
     if summary['avg_duration']:
-        print(f"average time per completed: {summary['avg_duration']}")
+        table.add_row("Avg Time/Completed", summary['avg_duration'])
+    
+    console.print(Panel(table, title="[bold cyan]Summary[/bold cyan]", border_style="cyan"))
     
     # Suggestion if started but no completed
     if summary['started'] > 0 and summary['completed'] == 0:
-        print(f"")
-        print(f"You have started {summary['started']} task(s) but haven't completed any yet. Consider focusing on completing some of them before starting new ones.")
+        console.print(f"\n[bold yellow]Tip:[/bold yellow] You have started {summary['started']} task(s) but haven't completed any yet. Consider focusing on completing some of them before starting new ones.")
 
 
 if __name__ == '__main__':
