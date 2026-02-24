@@ -54,26 +54,99 @@ def show_todo(code):
 
     for name, col in mapping:
         val = v(col)
-        if val not in (None, ''):
-            # Format duration value as HH:MM:SS if possible
-            if name == 'duration':
-                try:
-                    try:
-                        from .core.todo_ops import safe_float, format_seconds_as_hms
-                    except Exception:
-                        from commands.core.todo_ops import safe_float, format_seconds_as_hms
 
-                    if isinstance(val, (int, float)):
-                        out.append(f"{name}: {format_seconds_as_hms(float(val))}")
-                    elif isinstance(val, str) and ':' in val:
-                        out.append(f"{name}: {val}")
-                    else:
-                        secs = safe_float(val)
-                        out.append(f"{name}: {format_seconds_as_hms(secs)}")
-                    continue
+        # Special handling for duration: compute or format the duration even if
+        # the stored cell is empty (useful for IN PROGRESS tasks).
+        if name == 'duration':
+            try:
+                try:
+                    from .core.todo_ops import safe_float, format_seconds_as_hms
                 except Exception:
-                    # fall back to raw value on any error
-                    pass
+                    from commands.core.todo_ops import safe_float, format_seconds_as_hms
+
+                status = v(2)
+                try:
+                    status_up = str(status).strip().upper() if status not in (None, '') else ''
+                except Exception:
+                    status_up = ''
+
+                # base seconds from stored duration (handles HH:MM:SS or numeric)
+                try:
+                    base_secs = safe_float(val) if val not in (None, '') else 0.0
+                except Exception:
+                    base_secs = 0.0
+
+                result_secs = None
+
+                if status_up == 'IN PROGRESS':
+                    # prefer continued_at (col 8) then started_at (col 4)
+                    tstr = v(8) or ''
+                    if not tstr:
+                        tstr = v(4) or ''
+                    added = 0.0
+                    if tstr:
+                        try:
+                            started_dt = datetime.strptime(tstr, '%d/%m/%Y %H:%M:%S')
+                            added = (datetime.now() - started_dt).total_seconds()
+                            if added < 0:
+                                added = 0.0
+                        except Exception:
+                            added = 0.0
+                    result_secs = (base_secs or 0.0) + (added or 0.0)
+
+                elif status_up == 'PAUSED':
+                    # If stored duration exists use it; otherwise compute the
+                    # segment from continued/started to paused and add to base.
+                    if val not in (None, ''):
+                        result_secs = base_secs
+                    else:
+                        tpause = v(7) or ''
+                        tstart = v(8) or v(4) or ''
+                        added = 0.0
+                        if tpause and tstart:
+                            try:
+                                paused_dt = datetime.strptime(tpause, '%d/%m/%Y %H:%M:%S')
+                                started_dt = datetime.strptime(tstart, '%d/%m/%Y %H:%M:%S')
+                                added = (paused_dt - started_dt).total_seconds()
+                                if added < 0:
+                                    added = 0.0
+                            except Exception:
+                                added = 0.0
+                        result_secs = (base_secs or 0.0) + (added or 0.0)
+
+                elif status_up == 'COMPLETED':
+                    if val not in (None, ''):
+                        result_secs = base_secs
+                    else:
+                        tstart = v(4) or ''
+                        tend = v(5) or ''
+                        if tstart and tend:
+                            try:
+                                start_dt = datetime.strptime(tstart, '%d/%m/%Y %H:%M:%S')
+                                end_dt = datetime.strptime(tend, '%d/%m/%Y %H:%M:%S')
+                                secs = (end_dt - start_dt).total_seconds()
+                                if secs < 0:
+                                    secs = 0.0
+                                result_secs = secs
+                            except Exception:
+                                result_secs = None
+                        else:
+                            result_secs = None
+
+                else:
+                    # DRAFT or unknown status: only show if stored value exists
+                    if val not in (None, ''):
+                        result_secs = base_secs
+
+                if result_secs is not None:
+                    out.append(f"{name}: {format_seconds_as_hms(result_secs)}")
+                # otherwise skip showing duration
+                continue
+            except Exception:
+                # fall back to raw value on any error
+                pass
+
+        if val not in (None, ''):
             out.append(f"{name}: {val}")
 
     return "\n".join(out)

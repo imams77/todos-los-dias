@@ -109,10 +109,10 @@ These tests use pytest. To run them locally:
 
 ### Basic Features
 
-- [ ] Determine what to do to `IN PROGRESS` tasks if the day changed.
-- [ ] Add a `todo edit [code] [field_name] [new_value]` command to edit the title of an existing todo.
+- [x] Determine what to do to `IN PROGRESS` tasks if the day changed.
+- [x] Add a `todo edit [code] [field_name] [new_value]` command to edit the title of an existing todo.
 - [ ] Implement a `todo search [query]` command to search for todos by title or project code.
-- [ ] Add a `todo list [field_name] [status]` option to list only completed todos. field name can be `status` or `project (3 digits code)`.
+- [x] Add a `todo list [field_name] [status]` option to list only completed todos. field name can be `status` or `project (3 digits code)`.
 - [ ] Add a `todo global` command to run search / list across all files (e.g. search for a todo across all days).
 
 ### Sprint system

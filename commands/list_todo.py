@@ -41,6 +41,8 @@ def list_todos(code=None, status=None):
 
     wb = xlrd.open_workbook(filename)
     ws = wb.sheet_by_name('Todos')
+    # snapshot now for any "live" duration calculations
+    now = datetime.now()
 
     table = Table(box=box.SIMPLE)
     table.add_column("Code", style="cyan")
@@ -67,18 +69,51 @@ def list_todos(code=None, status=None):
         title = ws.cell_value(row, 1) if ws.ncols > 1 else ''
         st = ws.cell_value(row, 2) if ws.ncols > 2 else ''
         raw_duration = ws.cell_value(row, 6) if ws.ncols > 6 else ''
-        
-        if raw_duration in (None, ''):
-            duration = ''
+
+        # If the task is currently in progress, add the elapsed time since
+        # continued_at (preferred) or started_at to the stored duration.
+        duration = ''
+        try:
+            status_up = str(st).strip().upper() if st not in (None, '') else ''
+        except Exception:
+            status_up = ''
+
+        try:
+            # base seconds from stored duration (handles HH:MM:SS or numeric)
+            base_secs = safe_float(raw_duration) if raw_duration not in (None, '') else 0.0
+        except Exception:
+            base_secs = 0.0
+
+        if status_up == 'IN PROGRESS':
+            # prefer continued_at (col 8) then started_at (col 4)
+            time_str = ws.cell_value(row, 8) if ws.ncols > 8 else ''
+            if not time_str and ws.ncols > 4:
+                time_str = ws.cell_value(row, 4) or ''
+
+            added = 0.0
+            if time_str:
+                try:
+                    started_dt = datetime.strptime(time_str, '%d/%m/%Y %H:%M:%S')
+                    added = (now - started_dt).total_seconds()
+                    if added < 0:
+                        added = 0.0
+                except Exception:
+                    added = 0.0
+
+            total_secs = (base_secs or 0.0) + (added or 0.0)
+            duration = format_seconds_as_hms(total_secs)
         else:
-            try:
-                if isinstance(raw_duration, str) and ':' in raw_duration:
-                    duration = raw_duration
-                else:
-                    secs = safe_float(raw_duration)
-                    duration = format_seconds_as_hms(secs)
-            except Exception:
-                duration = str(raw_duration)
+            if raw_duration in (None, ''):
+                duration = ''
+            else:
+                try:
+                    if isinstance(raw_duration, str) and ':' in raw_duration:
+                        duration = raw_duration
+                    else:
+                        secs = safe_float(raw_duration)
+                        duration = format_seconds_as_hms(secs)
+                except Exception:
+                    duration = str(raw_duration)
 
         rows_data.append((row_code, title, st, duration))
 

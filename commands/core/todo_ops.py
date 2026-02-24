@@ -5,6 +5,7 @@ This centralises the small but repetitive workbook read/modify/write logic
 used by the start/continue implementations.
 """
 import xlrd
+import re
 import xlwt
 from datetime import datetime
 
@@ -84,6 +85,36 @@ def format_seconds_as_hms(seconds: float) -> str:
     minutes = (total % 3600) // 60
     secs = total % 60
     return f"{hours:02d}:{minutes:02d}:{secs:02d}"
+
+
+def normalize_status(s):
+    """Normalize a status-like string to one of the canonical values.
+
+    Recognises common variants such as "in-progress", "IN_PROGRESS",
+    "in progress", "inprogress" and maps them to the canonical
+    uppercase values used in the XLS file: 'DRAFT', 'IN PROGRESS',
+    'PAUSED', 'COMPLETED'. Returns None for unknown inputs.
+    """
+    if s is None:
+        return None
+    try:
+        ss = str(s).strip().lower()
+    except Exception:
+        return None
+
+    # collapse separators (spaces, hyphens, underscores) to a compact key
+    key = re.sub(r"[\s\-_]+", "", ss)
+
+    mapping = {
+        'draft': 'DRAFT',
+        'inprogress': 'IN PROGRESS',
+        'paused': 'PAUSED',
+        'completed': 'COMPLETED',
+        'complete': 'COMPLETED',
+        'done': 'COMPLETED',
+    }
+
+    return mapping.get(key)
 
 
 def write_updated_file(filename: str, row_to_update: int, updates: dict, today: datetime):
